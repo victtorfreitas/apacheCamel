@@ -15,6 +15,13 @@ public class RotaPedidos {
       @Override
       public void configure() {
         from("file:pedidos?delay=5s&noop=true")
+            .routeId("rotas-pedidos")
+            .multicast()
+            .to("direct:http")
+            .to("direct:soap");
+
+        from("direct:http")
+            .routeId("rota-htpp")
             .setProperty("pedidoId", xpath("/pedido/id/text()"))
             .setProperty("clientId", xpath("/pedido/pagamento/email-titular/text()"))
             .split().xpath("/pedido/itens/item")
@@ -29,6 +36,11 @@ public class RotaPedidos {
                         + "pedidoId=${property.pedidoId}&"
                         + "clienteId=${property.clientId}"))
             .to("http4://localhost:8080/webservices/ebook/item");
+
+        from("direct:soap")
+            .routeId("rota-soap")
+            .log("chamando servico soap")
+            .to("mock:soap");
       }
     });
     context.start();
